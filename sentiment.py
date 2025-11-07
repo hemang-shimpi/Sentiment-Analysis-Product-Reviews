@@ -3,6 +3,8 @@ import re
 from transformers import pipeline
 import seaborn as sns
 import matplotlib.pyplot as plt
+from openai import OpenAI
+import streamlit as st
 
 MAX_TOKENS = 512
 SAMPLE_SIZE = 1000
@@ -57,6 +59,29 @@ def main():
     reviews_df['sentiment_hf'] = reviews_df['cleaned'].apply(lambda x: sentiment_pipeline(x)[0]['label'])
 
     create_visual(reviews_df)
+
+    client = OpenAI(api_key="API_KEY")
+
+    reviews_sample = reviews_df['review_text'].sample(100).tolist()
+    text_to_summarize = " ".join(reviews_sample)
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Summarize the main themes of these customer reviews."},
+            {"role": "user", "content": text_to_summarize}
+        ]
+    )
+
+    summary = response.choices[0].message['content']
+    print(summary)
+
+    st.title("Customer Review Sentiment Dashboard")
+    st.bar_chart(reviews_df['sentiment'].value_counts())
+    st.write("Top Keywords Wordcloud:")
+    st.pyplot()
+    st.write("Summary:")
+    st.text(summary)
     
 if __name__ == "__main__":
     main()
